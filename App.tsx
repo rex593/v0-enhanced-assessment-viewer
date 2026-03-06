@@ -248,14 +248,14 @@ const HIGHLIGHT_SECTIONS = SECTIONS.filter((s) => s.flagged);
 // ─── Semantic color tokens — driven by ClipStatus ─────────────────────────────
 
 const STATUS_TOKENS: Record<ClipStatus, {
-  badge: string;
-  cardEdge: string;
-  pillRow: string;
-  pillIcon: string;
-  pillText: string;
-  signalTag: string;
-  obsHigh: string;
-  obsNormal: string;
+  badge: string;       // pill badge (text + bg + border)
+  cardEdge: string;    // left-border CSS class
+  pillRow: string;     // video pill row border + bg
+  pillIcon: string;    // icon color inside pill
+  pillText: string;    // text color inside pill
+  signalTag: string;   // signal chip
+  obsHigh: string;     // high-priority observation in player
+  obsNormal: string;   // normal observation in player
 }> = {
   pass: {
     badge:     "text-[var(--color-status-pass-text)] bg-[var(--color-status-pass-bg)] border-[var(--color-status-pass-border)]",
@@ -299,6 +299,7 @@ function formatTime(secs: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+// Derive a display status from the current eval selection
 function evalAnswerToStatus(evalAnswer: string, evalOptions: string[]): ClipStatus {
   const idx = evalOptions.indexOf(evalAnswer);
   if (idx <= 0) return "pass";
@@ -306,10 +307,11 @@ function evalAnswerToStatus(evalAnswer: string, evalOptions: string[]): ClipStat
   return "partial";
 }
 
+// Derive a display score from the resolved status
 function evalAnswerToScore(newStatus: ClipStatus, section: AssessmentSection): number {
   if (newStatus === "pass") return section.maxScore;
   if (newStatus === "fail") return 0;
-  return section.score;
+  return section.score; // preserve original partial score
 }
 
 // ─── Inline Video Pill + Player ───────────────────────────────────────────────
@@ -325,6 +327,7 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Sync defaultExpanded when it changes (e.g. view mode switch)
   useEffect(() => {
     setExpanded(defaultExpanded);
     setIsPlaying(false);
@@ -374,6 +377,7 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
 
   return (
     <div>
+      {/* Pill row — colored by section status */}
       <button
         onClick={() => setExpanded((e) => !e)}
         className={cn(
@@ -412,10 +416,13 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
         </div>
       </button>
 
+      {/* Expanded inline player */}
       {expanded && (
         <div className="mt-2 rounded-lg border border-gray-200 overflow-hidden">
+          {/* Simulated video area */}
           <div className="relative bg-gray-900" style={{ aspectRatio: "16/9" }}>
             <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900" />
+
             <div className="absolute top-2 left-2.5 z-10">
               <span className="text-xs text-white/80 bg-black/40 rounded px-1.5 py-0.5">
                 {section.number}) {section.domain}
@@ -431,6 +438,7 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
                 {statusLabel(section.status)}
               </span>
             </div>
+
             {isPlaying && (
               <div className="absolute inset-0 flex items-center justify-center z-10">
                 <div className="w-2 h-2 rounded-full bg-white/30 animate-ping" />
@@ -438,6 +446,7 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
             )}
           </div>
 
+          {/* Controls */}
           <div className="bg-gray-950 px-3 pt-3 pb-2.5 flex flex-col gap-2">
             <div className="relative">
               <div className="absolute top-0 w-full pointer-events-none -translate-y-1 z-10">
@@ -543,16 +552,15 @@ function SectionCard({
       onEvalReset?.(section.id);
     }
   };
+  void handleEvalChange; // wired to eval option buttons in next iteration
 
   const handleReset = () => {
     setEvalAnswer(section.evalAnswer);
     onEvalReset?.(section.id);
   };
+  void handleReset; // available for future use
 
-  // Expose handlers for future inline eval buttons — suppress unused warnings
-  void handleEvalChange;
-  void handleReset;
-
+  // derive status + score from the current eval selection so badge + border stay in sync
   const displayStatus = evalAnswerToStatus(evalAnswer, section.evalOptions);
   const displayScore = evalAnswerToScore(displayStatus, section);
   const displayTokens = STATUS_TOKENS[displayStatus];
@@ -564,6 +572,7 @@ function SectionCard({
       showSpotlight && "spotlight-border"
     )}>
       <div className="px-4 pt-4 pb-3">
+        {/* Header row */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <h2 className="text-sm font-bold text-slate-800">
             {section.number}) {section.domain}
@@ -577,6 +586,7 @@ function SectionCard({
           </span>
         </div>
 
+        {/* Scoring instruction */}
         {section.scoringInstruction && (
           <Collapsible open={showInstruction} onOpenChange={setShowInstruction}>
             <CollapsibleTrigger className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors mb-3">
@@ -591,6 +601,7 @@ function SectionCard({
           </Collapsible>
         )}
 
+        {/* Q + R + E */}
         <div className="flex flex-col gap-2.5">
           <div>
             <span className="text-xs font-semibold text-slate-800">Question: </span>
@@ -600,10 +611,14 @@ function SectionCard({
             <span className="text-xs font-semibold text-slate-800">Response: </span>
             <span className="text-xs text-slate-600">{section.response}</span>
           </div>
+
+
         </div>
       </div>
 
+      {/* Video recording */}
       <div className="border-t border-slate-100 px-4 py-3">
+        {/* Q3: grey out label when no video was captured */}
         <p className={cn(
           "text-xs font-semibold mb-2",
           section.hasVideo === false ? "text-slate-300" : "text-slate-800"
@@ -612,10 +627,12 @@ function SectionCard({
         </p>
 
         {section.hasVideo === false ? (
+          /* Q3: no-video placeholder pill */
           <div className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 border border-dashed border-brand-secondary/20 bg-brand-secondary/5">
             <span className="text-xs text-brand-secondary/40 italic">Session video not captured</span>
           </div>
         ) : (
+          /* Q2: key on videoResetKey forces full remount on every mode switch */
           <VideoPill
             key={videoResetKey}
             section={section}
@@ -643,7 +660,7 @@ function SectionCard({
   );
 }
 
-// ─── View Filter ──────────────────────────────────────────────────────────────
+// ─── View Filter ───────────────��──────────────────────��─────────────────────��─
 
 interface ViewFilterProps {
   mode: ViewMode;
@@ -710,6 +727,7 @@ function PatientHeader({
 
   return (
     <div className="bg-white border-b border-brand-secondary/20 px-4 pt-4 pb-4">
+      {/* Breadcrumb */}
       <div className="text-xs text-brand-secondary/50 mb-3 flex items-center gap-1">
         <ChevronLeft className="w-3 h-3" />
         <span>Patient Chart</span>
@@ -717,22 +735,28 @@ function PatientHeader({
         <span className="text-brand-secondary font-medium">MoCA Video Review</span>
       </div>
 
+      {/* Main header row - matching assessment card layout */}
       <div className="flex items-start justify-between gap-3 mb-3">
+        {/* Left: Patient info */}
         <div className="flex flex-col gap-1">
+          {/* Name + badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-base font-bold text-slate-800 leading-tight">{PATIENT.name}</h1>
             <span className="text-xs font-semibold bg-sky-500 text-white rounded px-2 py-0.5 uppercase tracking-wide">
               Pending Review
             </span>
           </div>
+          {/* Patient details */}
           <p className="text-xs text-brand-secondary/50">
             DOB {PATIENT.dob} &middot; {PATIENT.age}y &middot; MRN {PATIENT.mrn}
           </p>
+          {/* Provider info */}
           <p className="text-sm text-brand-secondary/70">
             MoCA Standard &middot; {PATIENT.provider}
           </p>
         </div>
 
+        {/* Right: Score + History button */}
         <div className="flex items-start gap-2">
           <div className="text-right flex-shrink-0">
             <div className="flex items-baseline gap-0.5 justify-end">
@@ -757,6 +781,7 @@ function PatientHeader({
         </div>
       </div>
 
+      {/* Score progress bar */}
       <div className="rounded-full overflow-hidden h-2 bg-slate-100">
         <div
           className={cn(
@@ -785,14 +810,19 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
   const belowThreshold = totalScore <= PATIENT.threshold;
 
   const formattedDate = reportTime.toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
   const formattedTime = reportTime.toLocaleTimeString("en-US", {
-    hour: "numeric", minute: "2-digit", hour12: true,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
   });
 
   return (
     <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
+      {/* Report header */}
       <div className="bg-white border-b border-gray-200 px-4 pt-4 pb-4">
         <button
           onClick={onBack}
@@ -823,6 +853,8 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
       </div>
 
       <div className="flex flex-col gap-3 px-3 pt-3 pb-8">
+
+        {/* Override Audit Trail breadcrumb — only shown when overrides exist */}
         {hasOverrides && (
           <div className="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 border-b border-blue-100">
@@ -833,10 +865,14 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
               </span>
             </div>
             <div className="px-4 py-3 flex flex-col gap-3">
+
+              {/* Clinician row */}
               <div className="flex items-start gap-3">
                 <span className="text-xs font-semibold text-blue-400 w-16 flex-shrink-0 pt-px">Clinician</span>
                 <span className="text-xs text-blue-900 font-medium">{PATIENT.provider}</span>
               </div>
+
+              {/* Override detail rows */}
               <div className="flex items-start gap-3">
                 <span className="text-xs font-semibold text-blue-400 w-16 flex-shrink-0 pt-px">Overrides</span>
                 <div className="flex flex-col gap-1.5 flex-1">
@@ -854,6 +890,8 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
                   ))}
                 </div>
               </div>
+
+              {/* Timestamp row */}
               <div className="flex items-start gap-3">
                 <span className="text-xs font-semibold text-blue-400 w-16 flex-shrink-0 pt-px">Generated</span>
                 <span className="text-xs text-blue-800">
@@ -864,7 +902,9 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
           </div>
         )}
 
+        {/* Main report card */}
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          {/* Report title block */}
           <div className="px-4 pt-4 pb-3 border-b border-gray-100">
             <p className="text-sm font-bold text-gray-900">MoCA Report — Unassisted.</p>
             <div className="flex items-center gap-2 mt-1.5">
@@ -888,6 +928,7 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
             </p>
           </div>
 
+          {/* Introduction section */}
           <div className="px-4 py-3 border-b border-gray-100">
             <p className="text-xs font-bold text-gray-400 tracking-wide uppercase mb-2.5">Introduction</p>
             <div className="flex flex-col gap-2.5">
@@ -900,6 +941,7 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
             </div>
           </div>
 
+          {/* MoCA domains */}
           <div className="px-4 pt-3 pb-4">
             <p className="text-xs font-bold text-gray-400 tracking-wide uppercase mb-3">MoCA</p>
             <div className="flex flex-col gap-4">
@@ -911,6 +953,7 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
 
                 return (
                   <div key={section.id}>
+                    {/* Domain header */}
                     <div className="flex items-center gap-2 mb-1.5">
                       <p className="text-xs font-bold text-gray-800">
                         {section.number}) {section.domain}
@@ -926,6 +969,8 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
                         {statusLabel(status)}
                       </span>
                     </div>
+
+                    {/* Q / Response / Score */}
                     <div className="ml-3 flex flex-col gap-1 border-l-2 border-gray-100 pl-3">
                       <p className="text-xs text-gray-500">
                         <span className="font-semibold text-gray-600">Question: </span>
@@ -947,6 +992,7 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
           </div>
         </div>
 
+        {/* Footer note */}
         <div className="flex justify-center">
           <span className="text-xs text-gray-300 border border-gray-200 rounded-full px-3 py-1 bg-white">
             {hasOverrides ? "Contains clinician overrides" : "No overrides applied"} &middot; MoCA Video Review
@@ -960,15 +1006,19 @@ function ReportPage({ evalOverrides, totalScore, reportTime, onBack }: ReportPag
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  // Auto-navigate to history if there are previous assessments (more than just current)
   const hasPreviousAssessments = assessmentHistory.length > 1;
   const [appView, setAppView] = useState<AppView>(hasPreviousAssessments ? "history" : "review");
   const [archivedReviewId, setArchivedReviewId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("highlights");
+  // Q2: incrementing this key forces every VideoPill to fully remount on mode switch
   const [videoResetKey, setVideoResetKey] = useState(0);
+  // Lifted override state: keyed by sectionId
   const [evalOverrides, setEvalOverrides] = useState<Record<string, Override>>({});
   const [reportTime, setReportTime] = useState<Date | null>(null);
   const [focusedDomain, setFocusedDomain] = useState<string | null>(null);
 
+  // Maps AssessmentHistory domain labels → SECTIONS domain names (handles partial matches)
   const resolveDomainToSection = (historyDomain: string) => {
     return SECTIONS.find((s) =>
       s.domain.toLowerCase().includes(historyDomain.toLowerCase()) ||
@@ -999,17 +1049,20 @@ export default function App() {
     setAppView("report");
   };
 
+  // Q1 (header): compute total score dynamically from all current eval answers
   const totalScore = SECTIONS.reduce((sum, section) => {
     const answer = evalOverrides[section.id]?.answer ?? section.evalAnswer;
     const status = evalAnswerToStatus(answer, section.evalOptions);
     return sum + evalAnswerToScore(status, section);
   }, 0);
 
+  // Handle navigation from history
   const handleNavigateToReview = (assessmentId: string | null, focusDomain?: string) => {
     if (assessmentId === null) {
       setArchivedReviewId(null);
       setAppView("review");
       if (focusDomain) {
+        // Switch to all-clips mode and set focused domain
         setViewMode("all");
         setVideoResetKey((k) => k + 1);
         setFocusedDomain(focusDomain);
@@ -1020,13 +1073,14 @@ export default function App() {
     }
   };
 
-  // Compute visible sections — focused section floats to top
+  // Compute visible sections — float focused domain to top when deep-linking from history
   const baseSections = viewMode === "highlights" ? HIGHLIGHT_SECTIONS : SECTIONS;
   const focusedSection = focusedDomain ? resolveDomainToSection(focusedDomain) : null;
   const visibleSections = focusedSection
     ? [focusedSection, ...baseSections.filter((s) => s.id !== focusedSection.id)]
     : baseSections;
 
+  // ── Report view ────────────────────────────────────────────────────────────
   if (appView === "report" && reportTime) {
     return (
       <ReportPage
@@ -1038,6 +1092,7 @@ export default function App() {
     );
   }
 
+  // ── History view ───────────────────────────────────────────────────────────
   if (appView === "history") {
     return (
       <AssessmentHistory
@@ -1048,16 +1103,20 @@ export default function App() {
     );
   }
 
+  // ── Archived Review view ───────────────────────────────────────────────────
   if (appView === "archived-review" && archivedReviewId) {
     const archivedAssessment = assessmentHistory.find((a) => a.id === archivedReviewId);
     const archivedDate = archivedAssessment
       ? new Date(archivedAssessment.date + "T00:00:00").toLocaleDateString("en-US", {
-          month: "long", day: "numeric", year: "numeric",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
         })
       : "Unknown Date";
 
     return (
       <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
+        {/* Breadcrumb header */}
         <div className="px-3 pt-3 pb-2 border-b border-brand-secondary/20 bg-white">
           <nav className="flex items-center gap-1.5 text-xs text-brand-secondary/50 mb-2">
             <button
@@ -1093,16 +1152,19 @@ export default function App() {
 
         <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
           <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+
           {visibleSections.map((section) => (
             <SectionCard
               key={section.id}
               section={section}
               autoExpandVideo={viewMode === "highlights" && section.flagged}
               videoResetKey={videoResetKey}
+              // Archived view is read-only: no overrides, no change handlers
               initialEvalAnswer={section.evalAnswer}
               showSpotlight={viewMode === "all" && section.flagged}
             />
           ))}
+
           <div className="flex justify-center mt-4">
             <span className="text-xs text-brand-secondary/50 border border-brand-secondary/20 rounded-full px-3 py-1 bg-white">
               Archived Assessment &middot; {archivedDate}
@@ -1113,19 +1175,23 @@ export default function App() {
     );
   }
 
+  // ── Review view (Pending) ──────────────────────────────────────────────────
   return (
     <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
       <PatientHeader totalScore={totalScore} onOpenHistory={() => setAppView("history")} />
 
       <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
+        {/* View filter */}
         <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
 
+        {/* Empty state for highlights */}
         {viewMode === "highlights" && HIGHLIGHT_SECTIONS.length === 0 && (
           <div className="mt-4 text-center text-sm text-brand-secondary/50">
             No highlights for this assessment.
           </div>
         )}
 
+        {/* Deep-link banner — shown when arriving from a domain tap in history */}
         {focusedSection && (
           <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-3 py-2">
             <div className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
@@ -1142,6 +1208,7 @@ export default function App() {
           </div>
         )}
 
+        {/* Cards */}
         {visibleSections.map((section) => (
           <SectionCard
             key={section.id}
@@ -1155,6 +1222,7 @@ export default function App() {
           />
         ))}
 
+        {/* Review Completed CTA */}
         <div className="mt-2 flex flex-col gap-2">
           <button
             onClick={handleReviewCompleted}
