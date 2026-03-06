@@ -45,38 +45,53 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Brand colors - Clean medical palette */
+  /* Brand colors */
   --color-brand-primary: oklch(0.20 0.025 260);
   --color-brand-secondary: oklch(0.35 0.03 250);
   --color-brand-accent: oklch(0.55 0.15 220);
   --color-brand-bg: oklch(0.97 0.005 250);
+
+  /* ── Semantic status tokens ─────────────────────────────────────── */
+  /* Pass — emerald green */
+  --color-status-pass-text:   oklch(0.42 0.13 162);
+  --color-status-pass-bg:     oklch(0.97 0.04 162);
+  --color-status-pass-border: oklch(0.88 0.08 162);
+  --color-status-pass-edge:   oklch(0.56 0.16 162);   /* left-border accent */
+
+  /* Partial — amber */
+  --color-status-partial-text:   oklch(0.52 0.14 75);
+  --color-status-partial-bg:     oklch(0.97 0.05 82);
+  --color-status-partial-border: oklch(0.88 0.09 78);
+  --color-status-partial-edge:   oklch(0.68 0.17 72);
+
+  /* Fail — rose red */
+  --color-status-fail-text:   oklch(0.48 0.18 15);
+  --color-status-fail-bg:     oklch(0.97 0.04 15);
+  --color-status-fail-border: oklch(0.88 0.08 15);
+  --color-status-fail-edge:   oklch(0.58 0.22 15);
+
+  /* Focus / deep-link — sky blue */
+  --color-status-focus-text:   oklch(0.46 0.16 240);
+  --color-status-focus-bg:     oklch(0.96 0.04 237);
+  --color-status-focus-border: oklch(0.83 0.10 237);
+  --color-status-focus-edge:   oklch(0.55 0.18 237);
 
   /* Animations */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
 
   @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
+    from { height: 0; }
+    to   { height: var(--radix-accordion-content-height); }
   }
-
   @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
+    from { height: var(--radix-accordion-content-height); }
+    to   { height: 0; }
   }
 }
 
 @layer base {
   :root {
-    /* Medical color palette - Clean, professional, trustworthy */
     --background: oklch(0.985 0.005 250);
     --foreground: oklch(0.25 0.03 250);
     --card: oklch(1 0 0);
@@ -98,14 +113,12 @@
     --ring: oklch(0.55 0.12 250);
     --radius: 0.625rem;
 
-    /* Chart colors - Medical-appropriate blues and greens */
     --chart-1: oklch(0.45 0.15 250);
     --chart-2: oklch(0.60 0.15 165);
     --chart-3: oklch(0.55 0.12 220);
     --chart-4: oklch(0.70 0.12 180);
     --chart-5: oklch(0.65 0.10 200);
 
-    /* Sidebar colors */
     --sidebar: oklch(0.98 0.005 250);
     --sidebar-foreground: oklch(0.25 0.03 250);
     --sidebar-primary: oklch(0.45 0.15 250);
@@ -117,7 +130,6 @@
   }
 
   .dark {
-    /* Medical dark mode - Calm, professional */
     --background: oklch(0.18 0.02 250);
     --foreground: oklch(0.95 0.005 250);
     --card: oklch(0.22 0.02 250);
@@ -138,14 +150,12 @@
     --input: oklch(0.30 0.02 250);
     --ring: oklch(0.50 0.10 250);
 
-    /* Chart colors - Medical blues and teals */
     --chart-1: oklch(0.60 0.12 250);
     --chart-2: oklch(0.65 0.14 165);
     --chart-3: oklch(0.55 0.10 220);
     --chart-4: oklch(0.70 0.10 180);
     --chart-5: oklch(0.60 0.08 200);
 
-    /* Sidebar colors */
     --sidebar: oklch(0.20 0.02 250);
     --sidebar-foreground: oklch(0.95 0.005 250);
     --sidebar-primary: oklch(0.65 0.12 250);
@@ -166,26 +176,37 @@
   }
 }
 
-@keyframes border-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 oklch(0.45 0.15 250 / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 0 4px oklch(0.45 0.15 250 / 0.1);
-  }
+/* ── Status-driven card borders ─────────────────────────────────────────────── */
+
+.card-border-pass {
+  border-left: 4px solid var(--color-status-pass-edge);
+}
+.card-border-partial {
+  border-left: 4px solid var(--color-status-partial-edge);
+}
+.card-border-fail {
+  border-left: 4px solid var(--color-status-fail-edge);
+}
+.card-border-focus {
+  border-left: 4px solid var(--color-status-focus-edge);
 }
 
-@keyframes badge-pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.15);
-  }
+/* ── Spotlight animation (focus deep-link) ──────────────────────────────────── */
+
+@keyframes focus-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--color-status-focus-border); }
+  50%       { box-shadow: 0 0 0 5px oklch(0.55 0.18 237 / 0.12); }
 }
 
 .spotlight-border {
-  animation: border-pulse 2.5s ease-in-out infinite;
+  animation: focus-pulse 2.5s ease-in-out infinite;
+}
+
+/* ── Badge pulse (highlights count) ────────────────────────────────────────── */
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.15); }
 }
 
 .spotlight-badge {
