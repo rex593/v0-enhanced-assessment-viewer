@@ -507,23 +507,25 @@ function VideoPill({ section, defaultExpanded = false }: VideoPillProps) {
 
 interface SectionCardProps {
   section: AssessmentSection;
+  id?: string;
   autoExpandVideo?: boolean;
   videoResetKey?: number;
   initialEvalAnswer?: string;
   onEvalChange?: (override: Override) => void;
   onEvalReset?: (sectionId: string) => void;
   showSpotlight?: boolean;
-}
-
+  }
+  
 function SectionCard({
   section,
+  id,
   autoExpandVideo = false,
   videoResetKey = 0,
   initialEvalAnswer,
   onEvalChange,
   onEvalReset,
   showSpotlight = false,
-}: SectionCardProps) {
+  }: SectionCardProps) {
   const [showInstruction, setShowInstruction] = useState(false);
   const [evalAnswer, setEvalAnswer] = useState(initialEvalAnswer ?? section.evalAnswer);
 
@@ -558,11 +560,14 @@ function SectionCard({
   const displayTokens = STATUS_TOKENS[displayStatus];
 
   return (
-    <div className={cn(
-      "bg-white rounded-2xl border border-slate-200 overflow-hidden transition-shadow",
-      displayTokens.cardEdge,
-      showSpotlight && "spotlight-border"
-    )}>
+    <div
+      id={id}
+      className={cn(
+        "bg-white rounded-2xl border border-slate-200 overflow-hidden transition-shadow",
+        displayTokens.cardEdge,
+        showSpotlight && "spotlight-border"
+      )}
+    >
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-start justify-between gap-2 mb-2">
           <h2 className="text-sm font-bold text-slate-800">
@@ -1027,6 +1032,16 @@ export default function App() {
     ? [focusedSection, ...baseSections.filter((s) => s.id !== focusedSection.id)]
     : baseSections;
 
+  // Scroll to focused section after navigation
+  useEffect(() => {
+    if (!focusedDomain || !focusedSection) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`section-${focusedSection.id}`);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [focusedDomain, appView, focusedSection]);
+
   if (appView === "report" && reportTime) {
     return (
       <ReportPage
@@ -1108,6 +1123,7 @@ export default function App() {
           {visibleSections.map((section) => (
             <SectionCard
               key={section.id}
+              id={`section-${section.id}`}
               section={section}
               autoExpandVideo={viewMode === "highlights" && section.flagged}
               videoResetKey={videoResetKey}
@@ -1157,6 +1173,7 @@ export default function App() {
         {visibleSections.map((section) => (
           <SectionCard
             key={section.id}
+            id={`section-${section.id}`}
             section={section}
             autoExpandVideo={viewMode === "highlights" && section.flagged}
             videoResetKey={videoResetKey}
