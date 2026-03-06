@@ -366,7 +366,7 @@ interface TimelineEntryProps {
   expandedId: string | null;
   onToggle: (id: string) => void;
   onViewVideoReview: (assessmentId: string | null) => void;
-  onDomainClick?: (domain: string) => void;
+  onDomainClick?: (assessmentId: string | null, domain: string) => void;
 }
 
 function TimelineEntry({
@@ -498,8 +498,8 @@ function TimelineEntry({
                   <DomainBreakdown
                     domains={assessment.domainScores}
                     onDomainClick={
-                      isCurrent && assessment.hasVideoReview
-                        ? (domain) => onDomainClick?.(domain)
+                      assessment.hasVideoReview
+                        ? (domain) => onDomainClick?.(isCurrent ? null : assessment.id, domain)
                         : undefined
                     }
                   />
@@ -569,9 +569,9 @@ export default function AssessmentHistory({
     onNavigateToReview(assessmentId);
   };
 
-  const handleDomainClick = (domain: string) => {
+  const handleDomainClick = (assessmentId: string | null, domain: string) => {
     setIsVisible(false);
-    setTimeout(() => onNavigateToReview(null, domain), 300);
+    setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
   };
 
   const handleClose = () => {

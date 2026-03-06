@@ -1013,10 +1013,18 @@ export default function App() {
         setViewMode("all");
         setVideoResetKey((k) => k + 1);
         setFocusedDomain(focusDomain);
+      } else {
+        setFocusedDomain(null);
       }
     } else {
       setArchivedReviewId(assessmentId);
       setAppView("archived-review");
+      if (focusDomain) {
+        setViewMode("all");
+        setFocusedDomain(focusDomain);
+      } else {
+        setFocusedDomain(null);
+      }
     }
   };
 
@@ -1093,6 +1101,18 @@ export default function App() {
 
         <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
           <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+          {focusedSection && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-700">
+              <span className="text-sky-400">↑</span>
+              Jumped to <span className="font-semibold">{focusedSection.domain}</span> from history
+              <button
+                onClick={() => setFocusedDomain(null)}
+                className="ml-auto text-sky-400 hover:text-sky-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {visibleSections.map((section) => (
             <SectionCard
               key={section.id}
@@ -1100,7 +1120,7 @@ export default function App() {
               autoExpandVideo={viewMode === "highlights" && section.flagged}
               videoResetKey={videoResetKey}
               initialEvalAnswer={section.evalAnswer}
-              showSpotlight={viewMode === "all" && section.flagged}
+              showSpotlight={(viewMode === "all" && section.flagged) || section.id === focusedSection?.id}
             />
           ))}
           <div className="flex justify-center mt-4">
