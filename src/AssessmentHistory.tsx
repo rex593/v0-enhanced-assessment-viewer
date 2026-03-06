@@ -46,38 +46,34 @@ interface Assessment {
 
 interface AssessmentHistoryProps {
   patientName: string;
-  onNavigateToReview: (assessmentId: string | null) => void;
-  currentScore?: number; // Dynamic score from Video Review page
+  onNavigateToReview: (assessmentId: string | null, focusDomain?: string) => void;
+  currentScore?: number;
 }
 
 // ─── Color Palette (Light Theme) ─────────────────────────────────────────────
 
 const STATUS_COLORS: Record<DomainStatus, { bg: string; text: string; border: string }> = {
   normal: {
-  bg: "bg-emerald-50",
-  text: "text-emerald-700",
-  border: "border-emerald-100",
+    bg: "bg-emerald-50",
+    text: "text-emerald-700",
+    border: "border-emerald-100",
   },
   borderline: {
-  bg: "bg-amber-50",
-  text: "text-amber-700",
-  border: "border-amber-100",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-100",
   },
   impaired: {
-  bg: "bg-rose-50",
+    bg: "bg-rose-50",
     text: "text-rose-700",
     border: "border-rose-100",
   },
 };
 
 const SCORE_COLORS = {
-  above: "text-emerald-400",
-  below: "text-amber-400",
-  barAbove: "bg-emerald-500",
-  barBelow: "bg-amber-500",
-  dotAbove: "#34d399", // emerald
-  dotBelow: "#fbbf24", // amber for below threshold
-  };
+  dotAbove: "oklch(0.56 0.16 162)",
+  dotBelow: "oklch(0.68 0.17 72)",
+};
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 
@@ -183,9 +179,7 @@ const THRESHOLD = 26;
 function formatDateLong(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
+    month: "long", day: "numeric", year: "numeric",
   });
 }
 
@@ -300,33 +294,58 @@ function ScoreTrendChart({ currentScore }: { currentScore?: number }) {
 
 // ─── Domain Breakdown Component ──────────────────────────────────────────────
 
-function DomainBreakdown({ domains }: { domains: DomainScore[] }) {
+function DomainBreakdown({
+  domains,
+  onDomainClick,
+}: {
+  domains: DomainScore[];
+  onDomainClick?: (domain: string) => void;
+}) {
   return (
     <div className="space-y-0.5">
       <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-slate-500">
         Domain Breakdown
+        {onDomainClick && (
+          <span className="ml-1.5 normal-case font-normal text-slate-400">· tap to review</span>
+        )}
       </p>
       <div className="rounded-lg border bg-white border-slate-200 divide-y divide-slate-100">
         {domains.map((domain) => {
           const colors = STATUS_COLORS[domain.status];
+          const isClickable = !!onDomainClick;
           return (
             <div
               key={domain.domain}
-              className="flex items-center justify-between px-3 py-2.5"
+              onClick={() => onDomainClick?.(domain.domain)}
+              className={cn(
+                "flex items-center justify-between px-3 py-2.5 transition-colors",
+                isClickable && "cursor-pointer hover:bg-sky-50 active:bg-sky-100 group"
+              )}
             >
-              <span className="text-sm text-slate-700">{domain.domain}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  "text-sm text-slate-700 transition-colors",
+                  isClickable && "group-hover:text-sky-700"
+                )}>
+                  {domain.domain}
+                </span>
+                {isClickable && (
+                  <svg
+                    className="w-3 h-3 text-slate-300 group-hover:text-sky-400 transition-colors"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold tabular-nums text-slate-800">
                   {domain.score}/{domain.maxScore}
                 </span>
-                <span
-                  className={cn(
-                    "text-xs font-medium rounded px-2.5 py-1 border uppercase",
-                    colors.bg,
-                    colors.text,
-                    colors.border
-                  )}
-                >
+                <span className={cn(
+                  "text-xs font-medium rounded px-2.5 py-1 border uppercase",
+                  colors.bg, colors.text, colors.border
+                )}>
                   {getStatusLabel(domain.status)}
                 </span>
               </div>
@@ -347,6 +366,7 @@ interface TimelineEntryProps {
   expandedId: string | null;
   onToggle: (id: string) => void;
   onViewVideoReview: (assessmentId: string | null) => void;
+  onDomainClick?: (assessmentId: string | null, domain: string) => void;
 }
 
 function TimelineEntry({
@@ -356,6 +376,7 @@ function TimelineEntry({
   expandedId,
   onToggle,
   onViewVideoReview,
+  onDomainClick,
 }: TimelineEntryProps) {
   const isExpanded = expandedId === assessment.id;
   const aboveThreshold = assessment.totalScore >= THRESHOLD;
@@ -364,7 +385,6 @@ function TimelineEntry({
 
   return (
     <div className="relative flex gap-3">
-      {/* Timeline connector line */}
       {!isLast && (
         <div
           className="absolute left-[7px] top-5 bottom-0 w-px bg-slate-200"
@@ -372,33 +392,22 @@ function TimelineEntry({
         />
       )}
 
-      {/* Timeline dot */}
       <div className="relative flex-shrink-0 mt-2">
-        <div
-          className={cn(
-            "w-[14px] h-[14px] rounded-full border-2",
-            isCurrent
-              ? "border-sky-500 bg-sky-500"
-              : "border-slate-300 bg-white"
-          )}
-        />
+        <div className={cn(
+          "w-[14px] h-[14px] rounded-full border-2",
+          isCurrent ? "border-sky-500 bg-sky-500" : "border-slate-300 bg-white"
+        )} />
       </div>
 
-      {/* Entry content */}
       <div className="flex-1 pb-4 min-w-0">
         <Collapsible open={isExpanded} onOpenChange={() => onToggle(assessment.id)}>
           <div className={cn(
             "rounded-xl border overflow-hidden",
-            isCurrent 
-              ? "bg-white border-slate-200 shadow-md" 
-              : "bg-white border-slate-200"
+            isCurrent ? "bg-white border-slate-200 shadow-md" : "bg-white border-slate-200"
           )}>
-            {/* Card header */}
             <div className="px-4 pt-3.5 pb-3">
-              {/* Date row */}
               <div className="flex items-start justify-between mb-1">
                 <div className="flex flex-col gap-1">
-                  {/* First line: Date + Current badge */}
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={cn(
                       "text-base font-bold",
@@ -417,12 +426,11 @@ function TimelineEntry({
                       </span>
                     )}
                   </div>
-                  {/* Second line: Video Review indicator (always shown) */}
                   <div className="h-5 flex items-center">
                     {assessment.hasVideoReview ? (
                       <span className={cn(
                         "text-xs font-medium rounded px-2 py-0.5 flex items-center gap-1",
-                        isCurrent 
+                        isCurrent
                           ? "bg-sky-50 text-sky-700 border border-sky-100"
                           : "bg-slate-50 text-slate-600 border border-slate-200"
                       )}>
@@ -435,14 +443,15 @@ function TimelineEntry({
                   </div>
                 </div>
 
-                {/* Score */}
                 <div className="text-right flex-shrink-0">
                   <div className="flex items-baseline gap-0.5">
                     <span
-                      className={cn(
-                        "text-2xl font-black tabular-nums",
-                        aboveThreshold ? "text-emerald-600" : "text-amber-600"
-                      )}
+                      className="text-2xl font-black tabular-nums"
+                      style={{
+                        color: aboveThreshold
+                          ? "var(--color-status-pass-edge)"
+                          : "var(--color-status-partial-edge)",
+                      }}
                     >
                       {assessment.totalScore}
                     </span>
@@ -451,53 +460,51 @@ function TimelineEntry({
                 </div>
               </div>
 
-              {/* Provider info */}
               <p className="text-sm mb-2.5 text-slate-500">
                 {assessment.testType} &middot; {assessment.provider}
               </p>
 
-              {/* Score bar */}
               <div className={cn(
                 "rounded-full overflow-hidden",
                 isCurrent ? "h-2 bg-slate-100" : "h-1.5 bg-slate-100"
               )}>
                 <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    aboveThreshold ? "bg-emerald-500" : "bg-amber-500"
-                  )}
-                  style={{ width: `${scorePercent}%` }}
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${scorePercent}%`,
+                    backgroundColor: aboveThreshold
+                      ? "var(--color-status-pass-edge)"
+                      : "var(--color-status-partial-edge)",
+                  }}
                 />
               </div>
             </div>
 
-            {/* Expand trigger */}
             <CollapsibleTrigger className={cn(
               "w-full flex items-center justify-center gap-1 border-t px-4 py-2 text-xs transition-colors",
-              isCurrent 
+              isCurrent
                 ? "border-slate-100 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                 : "border-slate-100 text-slate-400 hover:text-slate-600 hover:bg-slate-50"
             )}>
-              <ChevronDown
-                className={cn(
-                  "w-3.5 h-3.5 transition-transform duration-200",
-                  isExpanded && "rotate-180"
-                )}
-              />
+              <ChevronDown className={cn(
+                "w-3.5 h-3.5 transition-transform duration-200",
+                isExpanded && "rotate-180"
+              )} />
             </CollapsibleTrigger>
 
-            {/* Collapsible content with domain breakdown and video review button */}
             <CollapsibleContent>
-              <div className={cn(
-                "border-t px-4 py-3 space-y-4 bg-slate-50",
-                isCurrent ? "border-slate-100" : "border-slate-100"
-              )}>
-                {/* Domain Breakdown */}
+              <div className="border-t border-slate-100 px-4 py-3 space-y-4 bg-slate-50">
                 {assessment.domainScores && assessment.domainScores.length > 0 && (
-                  <DomainBreakdown domains={assessment.domainScores} />
+                  <DomainBreakdown
+                    domains={assessment.domainScores}
+                    onDomainClick={
+                      assessment.hasVideoReview
+                        ? (domain) => onDomainClick?.(isCurrent ? null : assessment.id, domain)
+                        : undefined
+                    }
+                  />
                 )}
 
-                {/* Video Review Button - always shown for current card if it has video */}
                 {assessment.hasVideoReview && isCurrent && (
                   <button
                     onClick={() => onViewVideoReview(null)}
@@ -507,8 +514,7 @@ function TimelineEntry({
                     Start Video Review
                   </button>
                 )}
-                
-                {/* Video Review Button for non-current cards */}
+
                 {assessment.hasVideoReview && !isCurrent && (
                   <button
                     onClick={() => onViewVideoReview(assessment.id)}
@@ -518,7 +524,7 @@ function TimelineEntry({
                     Review Video for {formatDateLong(assessment.date)}
                   </button>
                 )}
-                
+
                 {!assessment.hasVideoReview && !assessment.domainScores?.length && (
                   <p className="text-xs text-center py-2 text-slate-400">
                     No additional details available for this assessment.
@@ -540,11 +546,9 @@ export default function AssessmentHistory({
   onNavigateToReview,
   currentScore,
 }: AssessmentHistoryProps) {
-  // Current card expanded by default
   const [expandedId, setExpandedId] = useState<string | null>("current");
   const [isVisible, setIsVisible] = useState(false);
 
-  // Build display data, using dynamic currentScore for the current assessment
   const displayHistory = assessmentHistory.map((assessment) => {
     if (assessment.isCurrent && currentScore !== undefined) {
       return { ...assessment, totalScore: currentScore };
@@ -552,7 +556,6 @@ export default function AssessmentHistory({
     return assessment;
   });
 
-  // Slide-up animation on mount
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
@@ -566,6 +569,11 @@ export default function AssessmentHistory({
     onNavigateToReview(assessmentId);
   };
 
+  const handleDomainClick = (assessmentId: string | null, domain: string) => {
+    setIsVisible(false);
+    setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
+  };
+
   const handleClose = () => {
     setIsVisible(false);
     setTimeout(() => onNavigateToReview(null), 300);
@@ -575,8 +583,7 @@ export default function AssessmentHistory({
 
   return (
     <div className="fixed inset-0 z-50">
-      {/* Backdrop with strong blur effect */}
-      <div 
+      <div
         className={cn(
           "absolute inset-0 bg-slate-900/40 transition-all duration-300",
           isVisible ? "opacity-100 backdrop-blur-md" : "opacity-0 backdrop-blur-none pointer-events-none"
@@ -584,20 +591,15 @@ export default function AssessmentHistory({
         onClick={handleClose}
         aria-label="Close drawer"
       />
-      
-      {/* Drawer - Light theme */}
-      <div 
-        className={cn(
-          "absolute bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-gray-50 rounded-t-3xl shadow-2xl flex flex-col transition-transform duration-300 ease-out max-h-[92vh]",
-          isVisible ? "translate-y-0" : "translate-y-full"
-        )}
-      >
-        {/* Drag handle */}
+
+      <div className={cn(
+        "absolute bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-gray-50 rounded-t-3xl shadow-2xl flex flex-col transition-transform duration-300 ease-out max-h-[92vh]",
+        isVisible ? "translate-y-0" : "translate-y-full"
+      )}>
         <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-300" />
         </div>
 
-        {/* Header */}
         <div className="px-4 pt-2 pb-3 border-b border-slate-200 flex-shrink-0 bg-white">
           <div className="flex items-center justify-between">
             <div>
@@ -617,15 +619,12 @@ export default function AssessmentHistory({
           </div>
         </div>
 
-        {/* Scrollable body */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-gray-50">
           <div className="flex flex-col gap-0 pb-8">
-            {/* Score Trend Chart */}
             <div className="pt-4">
               <ScoreTrendChart currentScore={currentScore} />
             </div>
 
-            {/* Timeline */}
             <div className="px-4 pt-4">
               {isEmptyHistory ? (
                 <div className="text-center py-8 px-4">
@@ -649,6 +648,7 @@ export default function AssessmentHistory({
                       expandedId={expandedId}
                       onToggle={handleToggle}
                       onViewVideoReview={handleViewVideoReview}
+                      onDomainClick={handleDomainClick}
                     />
                   ))}
                 </div>
