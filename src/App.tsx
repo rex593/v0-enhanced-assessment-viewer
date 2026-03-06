@@ -1038,9 +1038,9 @@ export default function App() {
     const timer = setTimeout(() => {
       const el = document.getElementById(`section-${focusedSection.id}`);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 150);
+    }, 100);
     return () => clearTimeout(timer);
-  }, [focusedDomain, appView]);
+  }, [focusedDomain, appView, focusedSection]);
 
   if (appView === "report" && reportTime) {
     return (
@@ -1072,48 +1072,42 @@ export default function App() {
       : "Unknown Date";
 
     return (
-      <div className="max-w-[480px] mx-auto h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
-        {/* Sticky header area */}
-        <div className="flex-shrink-0 sticky top-0 z-20 bg-gray-50">
-          <div className="px-3 pt-3 pb-2 border-b border-brand-secondary/20 bg-white">
-            <nav className="flex items-center gap-1.5 text-xs text-brand-secondary/50 mb-2">
-              <button
-                onClick={() => setAppView("history")}
-                className="hover:text-brand-secondary transition-colors"
-              >
-                Assessment History
-              </button>
-              <ChevronLeft className="w-3 h-3 rotate-180" />
-              <span className="text-brand-secondary">{archivedDate}</span>
-            </nav>
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-sm font-bold text-brand-secondary leading-tight">
-                  Archived Review: {archivedDate}
-                </h1>
-                <p className="text-xs text-brand-secondary/50 mt-0.5">
-                  {PATIENT.name} &middot; Read-only
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setArchivedReviewId(null);
-                  setAppView("review");
-                }}
-                className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/80 transition-colors"
-              >
-                <Clock className="w-3.5 h-3.5" />
-                Back to Pending Review
-              </button>
+      <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
+        <div className="px-3 pt-3 pb-2 border-b border-brand-secondary/20 bg-white">
+          <nav className="flex items-center gap-1.5 text-xs text-brand-secondary/50 mb-2">
+            <button
+              onClick={() => setAppView("history")}
+              className="hover:text-brand-secondary transition-colors"
+            >
+              Assessment History
+            </button>
+            <ChevronLeft className="w-3 h-3 rotate-180" />
+            <span className="text-brand-secondary">{archivedDate}</span>
+          </nav>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-sm font-bold text-brand-secondary leading-tight">
+                Archived Review: {archivedDate}
+              </h1>
+              <p className="text-xs text-brand-secondary/50 mt-0.5">
+                {PATIENT.name} &middot; Read-only
+              </p>
             </div>
-          </div>
-          <div className="px-3 pt-3">
-            <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+            <button
+              onClick={() => {
+                setArchivedReviewId(null);
+                setAppView("review");
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/80 transition-colors"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Back to Pending Review
+            </button>
           </div>
         </div>
 
-        {/* Scrollable cards area */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pt-2 pb-8 flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
+          <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
           {focusedSection && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-700">
               <span className="text-sky-400">↑</span>
@@ -1131,7 +1125,7 @@ export default function App() {
               key={section.id}
               id={`section-${section.id}`}
               section={section}
-              autoExpandVideo={(viewMode === "highlights" && section.flagged) || section.id === focusedSection?.id}
+              autoExpandVideo={viewMode === "highlights" && section.flagged}
               videoResetKey={videoResetKey}
               initialEvalAnswer={section.evalAnswer}
               showSpotlight={(viewMode === "all" && section.flagged) || section.id === focusedSection?.id}
@@ -1148,17 +1142,12 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-[480px] mx-auto h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
-      {/* Sticky header area */}
-      <div className="flex-shrink-0 sticky top-0 z-20 bg-gray-50">
-        <PatientHeader totalScore={totalScore} onOpenHistory={() => setAppView("history")} />
-        <div className="px-3 pt-3">
-          <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
-        </div>
-      </div>
+    <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
+      <PatientHeader totalScore={totalScore} onOpenHistory={() => setAppView("history")} />
 
-      {/* Scrollable cards area */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-3 pt-2 pb-8 flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
+        <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+
         {viewMode === "highlights" && HIGHLIGHT_SECTIONS.length === 0 && (
           <div className="mt-4 text-center text-sm text-brand-secondary/50">
             No highlights for this assessment.
@@ -1186,7 +1175,7 @@ export default function App() {
             key={section.id}
             id={`section-${section.id}`}
             section={section}
-            autoExpandVideo={(viewMode === "highlights" && section.flagged) || section.id === focusedSection?.id}
+            autoExpandVideo={viewMode === "highlights" && section.flagged}
             videoResetKey={videoResetKey}
             initialEvalAnswer={evalOverrides[section.id]?.answer}
             onEvalChange={handleEvalChange}
