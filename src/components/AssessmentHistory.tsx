@@ -15,8 +15,6 @@ import {
 } from "@/components/ui/collapsible";
 import {
   ChevronDown,
-  TrendingDown,
-  TrendingUp,
   Play,
   X,
 } from "lucide-react";
@@ -377,7 +375,7 @@ function TimelineEntry({
 }: TimelineEntryProps) {
   const isExpanded = expandedId === assessment.id;
   const aboveThreshold = assessment.totalScore >= THRESHOLD;
-  const delta = previousAssessment
+  const _delta = previousAssessment
     ? assessment.totalScore - previousAssessment.totalScore
     : null;
   const scorePercent = (assessment.totalScore / assessment.maxScore) * 100;
