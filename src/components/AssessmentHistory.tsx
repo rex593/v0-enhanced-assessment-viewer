@@ -48,7 +48,7 @@ interface Assessment {
 
 interface AssessmentHistoryProps {
   patientName: string;
-  onNavigateToReview: (assessmentId: string | null) => void;
+  onNavigateToReview: (assessmentId: string | null, focusDomain?: string) => void;
   currentScore?: number; // Dynamic score from Video Review page
 }
 
@@ -302,19 +302,33 @@ function ScoreTrendChart({ currentScore }: { currentScore?: number }) {
 
 // ─── Domain Breakdown Component ──────────────────────────────────────────────
 
-function DomainBreakdown({ domains }: { domains: DomainScore[] }) {
+function DomainBreakdown({
+  domains,
+  onDomainClick,
+}: {
+  domains: DomainScore[];
+  onDomainClick?: (domain: string) => void;
+}) {
   return (
     <div className="space-y-0.5">
       <p className="text-xs font-semibold mb-2 uppercase tracking-wide text-slate-500">
         Domain Breakdown
+        {onDomainClick && (
+          <span className="ml-1.5 normal-case font-normal text-slate-400">· tap to review</span>
+        )}
       </p>
       <div className="rounded-lg border bg-white border-slate-200 divide-y divide-slate-100">
         {domains.map((domain) => {
           const colors = STATUS_COLORS[domain.status];
+          const isClickable = !!onDomainClick;
           return (
             <div
               key={domain.domain}
-              className="flex items-center justify-between px-3 py-2.5"
+              onClick={() => onDomainClick?.(domain.domain)}
+              className={cn(
+                "flex items-center justify-between px-3 py-2.5 transition-colors",
+                isClickable && "cursor-pointer hover:bg-sky-50 active:bg-sky-100 group"
+              )}
             >
               <span className="text-sm text-slate-700">{domain.domain}</span>
               <div className="flex items-center gap-2">
@@ -349,6 +363,7 @@ interface TimelineEntryProps {
   expandedId: string | null;
   onToggle: (id: string) => void;
   onViewVideoReview: (assessmentId: string | null) => void;
+  onDomainClick?: (assessmentId: string | null, domain: string) => void;
 }
 
 function TimelineEntry({
@@ -358,6 +373,7 @@ function TimelineEntry({
   expandedId,
   onToggle,
   onViewVideoReview,
+  onDomainClick,
 }: TimelineEntryProps) {
   const isExpanded = expandedId === assessment.id;
   const aboveThreshold = assessment.totalScore >= THRESHOLD;
@@ -499,7 +515,14 @@ function TimelineEntry({
               )}>
                 {/* Domain Breakdown */}
                 {assessment.domainScores && assessment.domainScores.length > 0 && (
-                  <DomainBreakdown domains={assessment.domainScores} />
+                  <DomainBreakdown
+                    domains={assessment.domainScores}
+                    onDomainClick={
+                      assessment.hasVideoReview
+                        ? (domain) => onDomainClick?.(isCurrent ? null : assessment.id, domain)
+                        : undefined
+                    }
+                  />
                 )}
 
                 {/* Video Review Button - always shown for current card if it has video */}
@@ -569,6 +592,11 @@ export default function AssessmentHistory({
 
   const handleViewVideoReview = (assessmentId: string | null) => {
     onNavigateToReview(assessmentId);
+  };
+
+  const handleDomainClick = (assessmentId: string | null, domain: string) => {
+    setIsVisible(false);
+    setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
   };
 
   const handleClose = () => {
@@ -654,6 +682,7 @@ export default function AssessmentHistory({
                       expandedId={expandedId}
                       onToggle={handleToggle}
                       onViewVideoReview={handleViewVideoReview}
+                      onDomainClick={handleDomainClick}
                     />
                   ))}
                 </div>

@@ -1009,22 +1009,14 @@ export default function App() {
     if (assessmentId === null) {
       setArchivedReviewId(null);
       setAppView("review");
-      if (focusDomain) {
-        setViewMode("all");
-        setVideoResetKey((k) => k + 1);
-        setFocusedDomain(focusDomain);
-      } else {
-        setFocusedDomain(null);
-      }
+      setViewMode(focusDomain ? "all" : viewMode);
+      setFocusedDomain(focusDomain ?? null);
+      if (focusDomain) setVideoResetKey((k) => k + 1);
     } else {
       setArchivedReviewId(assessmentId);
       setAppView("archived-review");
-      if (focusDomain) {
-        setViewMode("all");
-        setFocusedDomain(focusDomain);
-      } else {
-        setFocusedDomain(null);
-      }
+      setViewMode(focusDomain ? "all" : "highlights");
+      setFocusedDomain(focusDomain ?? null);
     }
   };
 
