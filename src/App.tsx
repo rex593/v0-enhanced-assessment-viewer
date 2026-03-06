@@ -1104,6 +1104,37 @@ export default function App() {
               Back to Pending Review
             </button>
           </div>
+
+          {archivedAssessment && (
+            <div className="px-3 pb-3 pt-2 flex items-center gap-3 border-t border-brand-secondary/10 mt-2">
+              <div className="flex items-center gap-1.5">
+                <span className={cn(
+                  "text-2xl font-black tabular-nums",
+                  archivedAssessment.totalScore < 26
+                    ? "text-[var(--color-status-fail-edge)]"
+                    : "text-[var(--color-status-pass-edge)]"
+                )}>
+                  {archivedAssessment.totalScore}
+                </span>
+                <span className="text-xs text-brand-secondary/40 font-medium">
+                  / {archivedAssessment.maxScore}
+                </span>
+              </div>
+
+              <span className={cn(
+                "text-xs font-semibold rounded-full px-2.5 py-1 border",
+                archivedAssessment.totalScore < 26
+                  ? "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)] border-[var(--color-status-fail-border)]"
+                  : "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)] border-[var(--color-status-pass-border)]"
+              )}>
+                {archivedAssessment.totalScore < 26 ? "Below Threshold" : "Above Threshold"}
+              </span>
+
+              <span className="ml-auto text-xs text-brand-secondary/40">
+                Threshold: 26
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
