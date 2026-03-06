@@ -352,19 +352,32 @@ function DomainBreakdown({
                   </span>
                 </div>
               </div>
-              {isExpanded && (
-                <div className="px-3 pb-3 pt-1 bg-slate-50 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
-                  {domain.question && (
-                    <p><span className="font-semibold text-slate-700">Question: </span>{domain.question}</p>
-                  )}
-                  {domain.response && (
-                    <p><span className="font-semibold text-slate-700">Response: </span>{domain.response}</p>
-                  )}
-                  {!domain.question && !domain.response && (
-                    <p className="text-slate-400 italic">No detail available for this domain.</p>
-                  )}
+              <div
+                className={cn(
+                  "grid transition-all duration-300 ease-in-out",
+                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                )}
+              >
+                <div className="overflow-hidden">
+                  <div className="px-3 pb-3 pt-2 bg-slate-50 border-t border-slate-100 space-y-1.5">
+                    {domain.question && (
+                      <p className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-700">Question: </span>
+                        {domain.question}
+                      </p>
+                    )}
+                    {domain.response && (
+                      <p className="text-xs text-slate-600">
+                        <span className="font-semibold text-slate-700">Response: </span>
+                        {domain.response}
+                      </p>
+                    )}
+                    {!domain.question && !domain.response && (
+                      <p className="text-xs text-slate-400 italic">No detail available for this domain.</p>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -624,9 +637,13 @@ export default function AssessmentHistory({
       setIsVisible(false);
       setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
     } else {
-      // Expand that timeline entry and flag the domain to highlight inline
-      setExpandedId(assessmentId ?? "current");
-      setExpandedDomain({ assessmentId: assessmentId ?? "current", domain });
+      const id = assessmentId ?? "current";
+      setExpandedId(id);
+      setExpandedDomain((prev) =>
+        prev?.assessmentId === id && prev?.domain === domain
+          ? null  // collapse if same row clicked again
+          : { assessmentId: id, domain }
+      );
     }
   };
 
