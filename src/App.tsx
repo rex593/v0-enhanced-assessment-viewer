@@ -1038,9 +1038,9 @@ export default function App() {
     const timer = setTimeout(() => {
       const el = document.getElementById(`section-${focusedSection.id}`);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 100);
+    }, 150);
     return () => clearTimeout(timer);
-  }, [focusedDomain, appView, focusedSection]);
+  }, [focusedDomain, appView]);
 
   if (appView === "report" && reportTime) {
     return (
@@ -1072,42 +1072,77 @@ export default function App() {
       : "Unknown Date";
 
     return (
-      <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
-        <div className="px-3 pt-3 pb-2 border-b border-brand-secondary/20 bg-white">
-          <nav className="flex items-center gap-1.5 text-xs text-brand-secondary/50 mb-2">
-            <button
-              onClick={() => setAppView("history")}
-              className="hover:text-brand-secondary transition-colors"
-            >
-              Assessment History
-            </button>
-            <ChevronLeft className="w-3 h-3 rotate-180" />
-            <span className="text-brand-secondary">{archivedDate}</span>
-          </nav>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-sm font-bold text-brand-secondary leading-tight">
-                Archived Review: {archivedDate}
-              </h1>
-              <p className="text-xs text-brand-secondary/50 mt-0.5">
-                {PATIENT.name} &middot; Read-only
-              </p>
+      <div className="max-w-[480px] mx-auto h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
+        {/* Sticky header */}
+        <div className="flex-shrink-0 z-20 bg-white border-b border-brand-secondary/20">
+          {/* Breadcrumb + back button row */}
+          <div className="px-3 pt-3 pb-2">
+            <nav className="flex items-center gap-1.5 text-xs text-brand-secondary/50 mb-2">
+              <button
+                onClick={() => setAppView("history")}
+                className="hover:text-brand-secondary transition-colors"
+              >
+                Assessment History
+              </button>
+              <ChevronLeft className="w-3 h-3 rotate-180" />
+              <span className="text-brand-secondary">{archivedDate}</span>
+            </nav>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-sm font-bold text-brand-secondary leading-tight">
+                  Archived Review: {archivedDate}
+                </h1>
+                <p className="text-xs text-brand-secondary/50 mt-0.5">
+                  {PATIENT.name} &middot; Read-only
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setArchivedReviewId(null);
+                  setAppView("review");
+                }}
+                className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/80 transition-colors"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                Back to Pending Review
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setArchivedReviewId(null);
-                setAppView("review");
-              }}
-              className="flex items-center gap-1.5 text-xs font-medium text-brand-primary hover:text-brand-primary/80 transition-colors"
-            >
-              <Clock className="w-3.5 h-3.5" />
-              Back to Pending Review
-            </button>
           </div>
+
+          {/* Score and threshold indicator */}
+          {archivedAssessment && (
+            <div className="px-3 pb-3 flex items-center gap-3 border-t border-brand-secondary/10 pt-2">
+              <div className="flex items-center gap-2">
+                <span className={cn(
+                  "text-2xl font-black tabular-nums",
+                  archivedAssessment.totalScore < 26 ? "text-[var(--color-status-fail-edge)]" : "text-[var(--color-status-pass-edge)]"
+                )}>
+                  {archivedAssessment.totalScore}
+                </span>
+                <span className="text-xs text-brand-secondary/40 font-medium">
+                  / {archivedAssessment.maxScore}
+                </span>
+              </div>
+              <span className={cn(
+                "text-xs font-semibold rounded-full px-2.5 py-1 border",
+                archivedAssessment.totalScore < 26
+                  ? "bg-[var(--color-status-fail-bg)] text-[var(--color-status-fail-text)] border-[var(--color-status-fail-border)]"
+                  : "bg-[var(--color-status-pass-bg)] text-[var(--color-status-pass-text)] border-[var(--color-status-pass-border)]"
+              )}>
+                {archivedAssessment.totalScore < 26 ? "Below Threshold" : "Above Threshold"}
+              </span>
+              <span className="ml-auto text-xs text-brand-secondary/40">
+                Threshold: 26
+              </span>
+            </div>
+          )}
+
+          {/* Tab bar */}
+          <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
         </div>
 
-        <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
-          <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+        {/* Scrollable cards */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-3 pt-2 pb-8 flex flex-col gap-2.5">
           {focusedSection && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-700">
               <span className="text-sky-400">↑</span>
@@ -1125,7 +1160,7 @@ export default function App() {
               key={section.id}
               id={`section-${section.id}`}
               section={section}
-              autoExpandVideo={viewMode === "highlights" && section.flagged}
+              autoExpandVideo={(viewMode === "highlights" && section.flagged) || section.id === focusedSection?.id}
               videoResetKey={videoResetKey}
               initialEvalAnswer={section.evalAnswer}
               showSpotlight={(viewMode === "all" && section.flagged) || section.id === focusedSection?.id}
@@ -1142,31 +1177,31 @@ export default function App() {
   }
 
   return (
-    <div className="max-w-[480px] mx-auto min-h-screen bg-gray-50 flex flex-col font-sans">
-      <PatientHeader totalScore={totalScore} onOpenHistory={() => setAppView("history")} />
-
-      <div className="flex flex-col gap-2.5 px-3 pt-3 pb-8">
+    <div className="max-w-[480px] mx-auto h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
+      {/* Sticky header */}
+      <div className="flex-shrink-0 z-20 bg-gray-50">
+        <PatientHeader totalScore={totalScore} onOpenHistory={() => setAppView("history")} />
         <ViewFilter mode={viewMode} onModeChange={handleModeChange} />
+      </div>
 
-        {viewMode === "highlights" && HIGHLIGHT_SECTIONS.length === 0 && (
-          <div className="mt-4 text-center text-sm text-brand-secondary/50">
-            No highlights for this assessment.
+      {/* Scrollable cards area */}
+      <div className="flex-1 overflow-y-auto overscroll-contain px-3 pt-2 pb-8 flex flex-col gap-2.5">
+        {focusedSection && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-700">
+            <span className="text-sky-400">↑</span>
+            Jumped to <span className="font-semibold">{focusedSection.domain}</span> from history
+            <button
+              onClick={() => setFocusedDomain(null)}
+              className="ml-auto text-sky-400 hover:text-sky-600 transition-colors"
+            >
+              ✕
+            </button>
           </div>
         )}
 
-        {focusedSection && (
-          <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-xl px-3 py-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0" />
-            <p className="text-xs text-sky-700 flex-1">
-              Jumped to <span className="font-semibold">{focusedSection.domain}</span> from history
-            </p>
-            <button
-              onClick={() => setFocusedDomain(null)}
-              className="text-sky-400 hover:text-sky-600 transition-colors flex-shrink-0"
-              aria-label="Dismiss"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 rotate-[135deg]" />
-            </button>
+        {viewMode === "highlights" && HIGHLIGHT_SECTIONS.length === 0 && (
+          <div className="text-center py-12 text-sm text-slate-400">
+            No flagged sections for this assessment.
           </div>
         )}
 
@@ -1175,7 +1210,7 @@ export default function App() {
             key={section.id}
             id={`section-${section.id}`}
             section={section}
-            autoExpandVideo={viewMode === "highlights" && section.flagged}
+            autoExpandVideo={(viewMode === "highlights" && section.flagged) || section.id === focusedSection?.id}
             videoResetKey={videoResetKey}
             initialEvalAnswer={evalOverrides[section.id]?.answer}
             onEvalChange={handleEvalChange}
@@ -1184,7 +1219,7 @@ export default function App() {
           />
         ))}
 
-        <div className="mt-2 flex flex-col gap-2">
+        <div className="flex flex-col items-center gap-2 mt-2">
           <button
             onClick={handleReviewCompleted}
             className="w-full flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold text-sm rounded-2xl py-3.5 transition-colors shadow-sm"
@@ -1192,11 +1227,9 @@ export default function App() {
             <Check className="w-4 h-4" />
             Review Completed
           </button>
-          <div className="flex justify-center">
-            <span className="text-xs text-gray-300 border border-gray-200 rounded-full px-3 py-1 bg-white">
-              MLP &middot; Mindspan MoCA Video Review
-            </span>
-          </div>
+          <p className="text-xs text-brand-secondary/30">
+            MLP &middot; Mindspan MoCA Video Review
+          </p>
         </div>
       </div>
     </div>
