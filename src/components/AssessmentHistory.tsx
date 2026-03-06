@@ -29,6 +29,8 @@ interface DomainScore {
   score: number;
   maxScore: number;
   status: DomainStatus;
+  question?: string;
+  response?: string;
 }
 
 interface Assessment {
@@ -303,9 +305,11 @@ function ScoreTrendChart({ currentScore }: { currentScore?: number }) {
 function DomainBreakdown({
   domains,
   onDomainClick,
+  expandedDomain,
 }: {
   domains: DomainScore[];
   onDomainClick?: (domain: string) => void;
+  expandedDomain?: string | null;
 }) {
   return (
     <div className="space-y-0.5">
@@ -315,35 +319,52 @@ function DomainBreakdown({
           <span className="ml-1.5 normal-case font-normal text-slate-400">· tap to review</span>
         )}
       </p>
-      <div className="rounded-lg border bg-white border-slate-200 divide-y divide-slate-100">
+      <div className="rounded-lg border bg-white border-slate-200 divide-y divide-slate-100 overflow-hidden">
         {domains.map((domain) => {
           const colors = STATUS_COLORS[domain.status];
           const isClickable = !!onDomainClick;
+          const isExpanded = expandedDomain === domain.domain;
           return (
-            <div
-              key={domain.domain}
-              onClick={() => onDomainClick?.(domain.domain)}
-              className={cn(
-                "flex items-center justify-between px-3 py-2.5 transition-colors",
-                isClickable && "cursor-pointer hover:bg-sky-50 active:bg-sky-100 group"
-              )}
-            >
-              <span className="text-sm text-slate-700">{domain.domain}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold tabular-nums text-slate-800">
-                  {domain.score}/{domain.maxScore}
-                </span>
-                <span
-                  className={cn(
-                    "text-xs font-medium rounded px-2.5 py-1 border uppercase",
-                    colors.bg,
-                    colors.text,
-                    colors.border
-                  )}
-                >
-                  {getStatusLabel(domain.status)}
-                </span>
+            <div key={domain.domain}>
+              <div
+                onClick={() => onDomainClick?.(domain.domain)}
+                className={cn(
+                  "flex items-center justify-between px-3 py-2.5 transition-colors",
+                  isClickable && "cursor-pointer hover:bg-sky-50 active:bg-sky-100 group",
+                  domain.status === "impaired" && "border-l-2 border-red-400 pl-[10px]",
+                  domain.status === "borderline" && "border-l-2 border-amber-400 pl-[10px]"
+                )}
+              >
+                <span className="text-sm text-slate-700">{domain.domain}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold tabular-nums text-slate-800">
+                    {domain.score}/{domain.maxScore}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs font-medium rounded px-2.5 py-1 border uppercase",
+                      colors.bg,
+                      colors.text,
+                      colors.border
+                    )}
+                  >
+                    {getStatusLabel(domain.status)}
+                  </span>
+                </div>
               </div>
+              {isExpanded && (
+                <div className="px-3 pb-3 pt-1 bg-slate-50 border-t border-slate-100 text-xs text-slate-600 space-y-1.5">
+                  {domain.question && (
+                    <p><span className="font-semibold text-slate-700">Question: </span>{domain.question}</p>
+                  )}
+                  {domain.response && (
+                    <p><span className="font-semibold text-slate-700">Response: </span>{domain.response}</p>
+                  )}
+                  {!domain.question && !domain.response && (
+                    <p className="text-slate-400 italic">No detail available for this domain.</p>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -361,7 +382,8 @@ interface TimelineEntryProps {
   expandedId: string | null;
   onToggle: (id: string) => void;
   onViewVideoReview: (assessmentId: string | null) => void;
-  onDomainClick?: (assessmentId: string | null, domain: string) => void;
+  onDomainClick?: (assessmentId: string | null, domain: string, hasVideo: boolean) => void;
+  expandedDomain?: { assessmentId: string; domain: string } | null;
 }
 
 function TimelineEntry({
@@ -372,6 +394,7 @@ function TimelineEntry({
   onToggle,
   onViewVideoReview,
   onDomainClick,
+  expandedDomain,
 }: TimelineEntryProps) {
   const isExpanded = expandedId === assessment.id;
   const aboveThreshold = assessment.totalScore >= THRESHOLD;
@@ -515,10 +538,13 @@ function TimelineEntry({
                 {assessment.domainScores && assessment.domainScores.length > 0 && (
                   <DomainBreakdown
                     domains={assessment.domainScores}
-                    onDomainClick={
-                      assessment.hasVideoReview
-                        ? (domain) => onDomainClick?.(isCurrent ? null : assessment.id, domain)
-                        : undefined
+                    onDomainClick={(domain) =>
+                      onDomainClick?.(isCurrent ? null : assessment.id, domain, !!assessment.hasVideoReview)
+                    }
+                    expandedDomain={
+                      expandedDomain?.assessmentId === (isCurrent ? "current" : assessment.id)
+                        ? expandedDomain.domain
+                        : null
                     }
                   />
                 )}
@@ -569,6 +595,7 @@ export default function AssessmentHistory({
   // Current card expanded by default
   const [expandedId, setExpandedId] = useState<string | null>("current");
   const [isVisible, setIsVisible] = useState(false);
+  const [expandedDomain, setExpandedDomain] = useState<{ assessmentId: string; domain: string } | null>(null);
 
   // Build display data, using dynamic currentScore for the current assessment
   const displayHistory = assessmentHistory.map((assessment) => {
@@ -592,9 +619,15 @@ export default function AssessmentHistory({
     onNavigateToReview(assessmentId);
   };
 
-  const handleDomainClick = (assessmentId: string | null, domain: string) => {
-    setIsVisible(false);
-    setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
+  const handleDomainClick = (assessmentId: string | null, domain: string, hasVideo: boolean) => {
+    if (hasVideo) {
+      setIsVisible(false);
+      setTimeout(() => onNavigateToReview(assessmentId, domain), 300);
+    } else {
+      // Expand that timeline entry and flag the domain to highlight inline
+      setExpandedId(assessmentId ?? "current");
+      setExpandedDomain({ assessmentId: assessmentId ?? "current", domain });
+    }
   };
 
   const handleClose = () => {
@@ -681,6 +714,7 @@ export default function AssessmentHistory({
                       onToggle={handleToggle}
                       onViewVideoReview={handleViewVideoReview}
                       onDomainClick={handleDomainClick}
+                      expandedDomain={expandedDomain}
                     />
                   ))}
                 </div>
